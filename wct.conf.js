@@ -21,6 +21,10 @@ module.exports = {
           {
               browserName: "chrome",
               platform: "Windows 10"
+          },
+          {
+              browserName: "internet explorer",
+              platform: "Windows 10"
           }
       ]
     }

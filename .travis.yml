@@ -2,7 +2,7 @@ env:
   global:
     - DISPLAY=:99.0
     - BASEURL=http://localhost:9500
-    - BROWSER_LIST="chrome firefox"
+    - BROWSER_LIST="chrome firefox internet+explorer"
 
 sudo: required
 
@@ -42,3 +42,4 @@ notifications:
 branches:
   only:
     - master
+    - InternetExplorerTest

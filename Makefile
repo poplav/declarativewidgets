@@ -285,7 +285,7 @@ run-test:
 	@OPTIONS=-d SERVER_NAME=$(SERVER_NAME) $(MAKE) server
 	@echo 'Waiting for server to start...'
 	@LIMIT=60; while [ $$LIMIT -gt 0 ] && ! docker logs $(SERVER_NAME) 2>&1 | grep 'Notebook is running'; do echo waiting $$LIMIT...; sleep 1; LIMIT=$$(expr $$LIMIT - 1); done
-	@$(foreach browser, $(BROWSER_LIST), echo 'Running system integration tests on $(browser)...'; npm run system-test -- --baseurl $(BASEURL) --test-type $(TEST_TYPE) --browser $(browser);)
+	@$(foreach browser, $(BROWSER_LIST), echo 'Running system integration tests on $(subst +, ,$(browser))...'; npm run system-test -- --baseurl $(BASEURL) --test-type $(TEST_TYPE) --browser "$(subst +, ,$(browser))" --platform "Windows 10";)
 
 system-test: BASEURL?=http://192.168.99.100:9500
 system-test: SERVER_NAME?=urth_widgets_integration_test_server
