@@ -47,6 +47,11 @@ stringify_bindings <- function(bindings) {
     return (bindings_str)
 }
 
+create_code_cell <- function(code='', where='below') {
+    encoded_code <- base64encode(charToRaw(code))
+    display_javascript(paste("var code = IPython.notebook.insert_cell_", where, "('code');\n
+        code.set_text(atob(\"", encoded_code, "\"));", sep =""))
+}
 
 #' Explore function
 #'
@@ -58,7 +63,7 @@ stringify_bindings <- function(bindings) {
 #' @param channel  The channel to bind to defaulted to default
 #' @param properties  The properties e.g. properties <- list("selection-as-object"=FALSE, foo=5)
 #' @param bindings  The bindings e.g. bindings <- list(selection='sel')
-explore <- function(df, channel='default', properties=list(), bindings=list()) {
+explore <- function(df, channel='default', properties=list(), bindings=list(), display_code=FALSE) {
     unique_df_name <- paste("the_literal_template_df_name_", get_unique_explore_id(), sep = "")
     register_explore_df <- function(df) {
         #assigns df to global env and returns a unique name
@@ -68,10 +73,14 @@ explore <- function(df, channel='default', properties=list(), bindings=list()) {
 
     exlore_df_name <- ifelse(class(df) == "data.frame" || class(df) == "DataFrame", register_explore_df(df), df)
 
-    IRdisplay::display_html(paste("<link rel='import' href='urth_components/declarativewidgets-explorer/urth-viz-explorer.html'
+    generated_html <- paste("<link rel='import' href='urth_components/declarativewidgets-explorer/urth-viz-explorer.html'
                                     is='urth-core-import' package='jupyter-incubator/declarativewidgets_explorer'>
                                     <template is='urth-core-bind' channel='", channel, "'>
                                         <urth-viz-explorer ref='", exlore_df_name, "'",
-                                    stringify_properties(properties), stringify_bindings(bindings), "></urth-viz-explorer>",
-                                    "</template>", sep = ""))
+                            stringify_properties(properties), stringify_bindings(bindings), "></urth-viz-explorer>",
+                            "</template>", sep = "")
+    IRdisplay::display_html(generated_html)
+    if(display_code) {
+        create_code_cell(paste("IRdisplay::display_html(\"\n", generated_html, "\n\")", sep=""))
+    }
 }

@@ -11,6 +11,7 @@ import declarativewidgets.sparkIMain
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.repl.SparkIMain
 import scala.reflect.runtime.universe.ValDef
+import org.apache.commons.codec.binary.{ Base64 => ApacheBase64 }
 
 /**
   * Object that contains Widget Visualization one line displays
@@ -53,16 +54,17 @@ object Explore {
     * @param properties properties as a String
     * @param bindings bindings as a String
     */
-  def display(df: String, channel: String, properties: String, bindings: String) = {
+  def display(df: String, channel: String, properties: String, bindings: String, displayCode: Boolean) = {
     val explorerImport =
-      """
-        <link rel='import' href='urth_components/declarativewidgets-explorer/urth-viz-explorer.html'
+      """ <link rel='import' href='urth_components/declarativewidgets-explorer/urth-viz-explorer.html'
           is='urth-core-import' package='jupyter-incubator/declarativewidgets_explorer'>
       """
-    getKernel.display.html(s"$explorerImport " +
-                            s"<template is='urth-core-bind' channel='$channel'>" +
-                              s"<urth-viz-explorer ref='$df' $properties $bindings></urth-viz-explorer>" +
-                            "</template>")
+    val generatedHtml = s"$explorerImport " +
+      s"<template is='urth-core-bind' channel='$channel'>" +
+      s"<urth-viz-explorer ref='$df' $properties $bindings></urth-viz-explorer>" +
+      "</template>"
+    getKernel.display.html(generatedHtml)
+    if(displayCode) createCodeCell("%%html\n" + generatedHtml)
   }
 
   def stringifyProperties(properties: Map[String, Any]) = {
@@ -84,6 +86,12 @@ object Explore {
     }.mkString(" ")
   }
 
+  def createCodeCell(code: String = "", where: String = "below") = {
+    val encodedCode = new String(ApacheBase64.encodeBase64(code.getBytes))
+    getKernel.display.javascript(s"var code = IPython.notebook.insert_cell_$where('code');\n" +
+      "code.set_text(atob(\"" + encodedCode + "\"));")
+  }
+
   /**
     * Renders the urth-viz-explorer widget to the user output
     *
@@ -92,14 +100,14 @@ object Explore {
     * @param properties Map of properties e.g. {'selection-as-object': False, 'foo': 5}
     * @param bindings Map of bindings e.g. {'selection': 'sel'}
     */
-  def explore(df: Any, channel: String, properties: Map[String, Any], bindings: Map[String, String]) = {
+  def explore(df: Any, channel: String, properties: Map[String, Any], bindings: Map[String, String], displayCode: Boolean) = {
     df match {
       case d : DataFrame => {
         val dfString = getDfNameFromLastExploreRequest()
-        display(dfString, channel, stringifyProperties(properties), stringifyBindings(bindings))
+        display(dfString, channel, stringifyProperties(properties), stringifyBindings(bindings), displayCode)
       }
       case s: String => {
-        display(s, channel, stringifyProperties(properties), stringifyBindings(bindings))
+        display(s, channel, stringifyProperties(properties), stringifyBindings(bindings), displayCode)
       }
     }
   }

@@ -1,9 +1,11 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from IPython.core.display import display, HTML
+from IPython.core.display import display, HTML, Javascript
+from IPython.utils.py3compat import str_to_bytes, bytes_to_str
 import pandas
 import pyspark
+import base64
 
 unique_explore_id = 0
 
@@ -20,7 +22,14 @@ def stringify_properties(properties):
 def stringify_bindings(bindings):
     return ' '.join(map(lambda x: '{}="{{{{{}}}}}"'.format(x, bindings[x]), bindings))
 
-def explore(df, channel='default', properties={}, bindings={}):
+def create_code_cell(code='', where='below'):
+    encoded_code = bytes_to_str(base64.b64encode(str_to_bytes(code)))
+    display(Javascript("""
+        var code = IPython.notebook.insert_cell_{0}('code');
+        code.set_text(atob("{1}"));
+    """.format(where, encoded_code)))
+
+def explore(df, channel='default', properties={}, bindings={}, display_code=False):
     """
     Renders the urth-viz-explorer widget to the user output
     If pandas.DataFrame assign with unique name to user namespace else use what was passed in the string
@@ -41,12 +50,13 @@ def explore(df, channel='default', properties={}, bindings={}):
     else:
         explore_df = df
 
-    display(HTML(
-        """<link rel='import' href='urth_components/declarativewidgets-explorer/urth-viz-explorer.html'
-               is='urth-core-import' package='jupyter-incubator/declarativewidgets_explorer'>
-           <template is="urth-core-bind" channel="{channel}">
-               <urth-viz-explorer ref='{ref}' {props} {binds}></urth-viz-explorer>
-           </template>"""
-            .format(ref=explore_df, channel=channel,
-                    props=stringify_properties(properties), binds=stringify_bindings(bindings))
-    ))
+    generated_html = """<link rel='import' href='urth_components/declarativewidgets-explorer/urth-viz-explorer.html'
+                           is='urth-core-import' package='jupyter-incubator/declarativewidgets_explorer'>
+                       <template is="urth-core-bind" channel="{channel}">
+                           <urth-viz-explorer ref='{ref}' {props} {binds}></urth-viz-explorer>
+                       </template>""".format(ref=explore_df, channel=channel,
+                        props=stringify_properties(properties), binds=stringify_bindings(bindings))
+
+    display(HTML(generated_html))
+    if display_code:
+        create_code_cell("%%html\n" + generated_html)
